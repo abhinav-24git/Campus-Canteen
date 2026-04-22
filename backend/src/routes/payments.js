@@ -21,8 +21,10 @@ router.post('/create-rzp', async (req, res) => {
     const order = await instance.orders.create(options);
     res.status(200).json({ success: true, order });
   } catch (error) {
-    console.error('RZP Creation Error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    console.error('RZP Creation Error:', JSON.stringify(error, null, 2));
+    // Razorpay SDK wraps API errors — surface the real description if available
+    const errMsg = error?.error?.description || error?.message || 'Unknown gateway error';
+    res.status(500).json({ success: false, error: errMsg });
   }
 });
 
