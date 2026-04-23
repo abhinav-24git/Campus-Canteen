@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Platform } from 'react-native';
-import { Theme } from '../Theme';
+import { useTheme } from '../Theme';
 
 export default function CheckoutScreen({ cart, inventory, user, onBack, onComplete }) {
+  const { Theme } = useTheme();
+  const styles = getStyles(Theme);
   const [status, setStatus] = useState('summary'); // summary | processing | success | failed
   const [orders, setOrders] = useState([]);
   const [failMsg, setFailMsg] = useState('');
@@ -192,7 +194,7 @@ export default function CheckoutScreen({ cart, inventory, user, onBack, onComple
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (Theme) => StyleSheet.create({
   container: { flex: 1, backgroundColor: Theme.bg },
   label: { color: Theme.text2, fontFamily: 'monospace', marginBottom: 16 },
   razorpayMock: { backgroundColor: Theme.bg3, padding: 20, borderRadius: 10, borderColor: Theme.border, borderWidth: 1, marginBottom: 16 },

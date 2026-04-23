@@ -4,9 +4,11 @@ import { io } from 'socket.io-client';
 import LoginScreen from './src/screens/LoginScreen';
 import MenuScreen from './src/screens/MenuScreen';
 import CheckoutScreen from './src/screens/CheckoutScreen';
-import { Theme } from './src/Theme';
+import HistoryScreen from './src/screens/HistoryScreen';
+import { ThemeProvider, useTheme } from './src/Theme';
 
-const backendUrl = Platform.OS === 'web' ? 'http://localhost:8080' : 'http://10.0.2.2:8080';
+const localBackend = Platform.OS === 'web' ? 'http://localhost:8080' : 'http://10.0.2.2:8080';
+const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL || localBackend;
 const socket = io(backendUrl);
 
 // ─── Web-only styles injected once ────────────────────────────────────────────
@@ -137,21 +139,23 @@ if (Platform.OS === 'web') {
  * phone dimensions instead of the browser viewport.
  * On native it is a transparent passthrough.
  */
-function PhoneFrame({ children }) {
+function PhoneFrame({ children, bg, phoneViewStyle }) {
   if (Platform.OS !== 'web') {
     return children;
   }
   return (
-    <div id="phone-shell">
+    <div id="phone-shell" style={{ background: bg }}>
       {/* This View is the TRUE layout root — flex:1 children measure against it */}
-      <View style={styles.phoneView}>
+      <View style={phoneViewStyle}>
         {children}
       </View>
     </div>
   );
 }
 
-export default function App() {
+function MainApp() {
+  const { Theme, isLight } = useTheme();
+  const styles = getStyles(Theme);
   const [user, setUser] = useState(null);
   const [route, setRoute] = useState('Menu'); // Menu | Checkout
   const [inventory, setInventory] = useState([]);
@@ -186,15 +190,19 @@ export default function App() {
     ? orders.filter(o => o.userId === user.phone && o.status !== 'delivered')
     : [];
 
+  const historyUserOrders = user
+    ? orders.filter(o => o.userId === user.phone && o.status === 'delivered')
+    : [];
+
   const appContent = !user ? (
     <View style={styles.fill}>
-      <StatusBar barStyle="light-content" backgroundColor={Theme.bg} />
+      <StatusBar barStyle={isLight ? "dark-content" : "light-content"} backgroundColor={Theme.bg} />
       <LoginScreen onLogin={(userObj) => setUser(userObj)} />
     </View>
   ) : (
     <View style={styles.fill}>
-      <StatusBar barStyle="light-content" backgroundColor={Theme.bg} />
-      {route === 'Menu' ? (
+      <StatusBar barStyle={isLight ? "dark-content" : "light-content"} backgroundColor={Theme.bg} />
+      {route === 'Menu' && (
         <MenuScreen
           inventory={inventory}
           cart={cart}
@@ -203,8 +211,10 @@ export default function App() {
           user={user}
           onLogout={() => { setUser(null); setCart({}); }}
           onCheckout={() => setRoute('Checkout')}
+          onHistory={() => setRoute('History')}
         />
-      ) : (
+      )}
+      {route === 'Checkout' && (
         <CheckoutScreen
           cart={cart}
           inventory={inventory}
@@ -216,17 +226,31 @@ export default function App() {
           }}
         />
       )}
+      {route === 'History' && (
+        <HistoryScreen 
+          historyOrders={historyUserOrders}
+          onBack={() => setRoute('Menu')}
+        />
+      )}
     </View>
   );
 
   return (
-    <PhoneFrame>
+    <PhoneFrame bg={Theme.bg} phoneViewStyle={styles.phoneView}>
       {appContent}
     </PhoneFrame>
   );
 }
 
-const styles = StyleSheet.create({
+export default function App() {
+  return (
+    <ThemeProvider>
+      <MainApp />
+    </ThemeProvider>
+  );
+}
+
+const getStyles = (Theme) => StyleSheet.create({
   // 390×844 = iPhone 14 logical dimensions — this is the layout root on web
   phoneView: {
     width: 390,

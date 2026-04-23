@@ -25,6 +25,27 @@
   --sans: system-ui, -apple-system, sans-serif;
 }
 
+body.light-mode {
+  --bg: #f8f9f8;
+  --bg2: #ffffff;
+  --bg3: #f0f2f0;
+  --bg4: #e8eae8;
+  --border: #dcdedc;
+  --border2: #c4c6c4;
+  --text: #111111;
+  --text2: #444a44;
+  --text3: #777d77;
+  --accent: #8eb300;
+  --accent2: #6d8a00;
+  --accent-dim: rgba(142, 179, 0, 0.12);
+  --red: #e60000;
+  --red-dim: rgba(230,0,0,0.12);
+  --amber: #d98a00;
+  --amber-dim: rgba(217,138,0,0.12);
+  --green: #00b34a;
+  --green-dim: rgba(0,179,74,0.12);
+}
+
 * {
   box-sizing: border-box;
   margin: 0;

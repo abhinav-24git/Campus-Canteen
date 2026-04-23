@@ -1,9 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const COUNTER_LABELS = { 1: 'Paneer Chapati', 2: 'Snacks', 3: 'Khichadi' };
 
 export default function StaffDashboard({ socket, orders, inventory }) {
   const [activeCounter, setActiveCounter] = useState(1);
+  const [isLight, setIsLight] = useState(false);
+
+  useEffect(() => {
+    document.body.classList.toggle('light-mode', isLight);
+  }, [isLight]);
 
   // Robust filtering to ensure queues do not mix
   const counterOrders = orders
@@ -22,10 +27,13 @@ export default function StaffDashboard({ socket, orders, inventory }) {
   return (
     <div className="dashboard-container">
       <div className="section-header" style={{ marginBottom: 16 }}>
-        <div>
+        <div style={{ flex: 1 }}>
           <div className="section-label">Staff dashboard</div>
           <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--text)' }}>Real-time queue</div>
         </div>
+        <button className="btn" style={{ marginRight: 12 }} onClick={() => setIsLight(!isLight)}>
+          {isLight ? '🌙 Dark Mode' : '☀️ Light Mode'}
+        </button>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <div className="dot" style={{ background: 'var(--green)' }}></div>
           <div style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>LIVE</div>
@@ -73,8 +81,21 @@ export default function StaffDashboard({ socket, orders, inventory }) {
                   <strong style={{ color: idx === 0 ? 'var(--accent)' : 'var(--text)' }}>{order.code}</strong>
                 </div>
                 <div className="queue-name" style={{ fontSize: 16 }}>{order.studentName}</div>
-                <div style={{ fontSize: 13, color: 'var(--text2)', marginTop: 4 }}>
-                  {order.items.map(i => `${i.name} ×${i.qty}`).join(' · ')}
+                <div style={{ marginTop: 16, marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {order.items.map((i, idx) => (
+                    <div key={idx} style={{ 
+                      padding: '12px 16px', 
+                      background: 'var(--bg3)', 
+                      border: '1px solid var(--border)', 
+                      borderRadius: 8,
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}>
+                      <span style={{ fontSize: 18, fontWeight: 'bold', color: 'var(--text)' }}>{i.name}</span>
+                      <span style={{ fontSize: 18, fontWeight: 'bold', color: 'var(--accent)' }}>×{i.qty}</span>
+                    </div>
+                  ))}
                 </div>
                 <div className="queue-time">Ordered {order.time}</div>
               </div>

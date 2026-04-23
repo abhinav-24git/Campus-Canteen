@@ -1,8 +1,11 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
-import { Theme } from '../Theme';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal } from 'react-native';
+import { useTheme } from '../Theme';
 
-export default function MenuScreen({ inventory, cart, setCart, activeOrders, user, onLogout, onCheckout }) {
+export default function MenuScreen({ inventory, cart, setCart, activeOrders, user, onLogout, onCheckout, onHistory }) {
+  const { Theme, isLight, toggleTheme } = useTheme();
+  const styles = getStyles(Theme);
+  const [selectedOrder, setSelectedOrder] = useState(null);
   const updateCart = (id, delta) => {
     const item = inventory.find(i => i.id === id);
     if (!item || !item.available) return;
@@ -28,9 +31,15 @@ export default function MenuScreen({ inventory, cart, setCart, activeOrders, use
       <View style={styles.topNav}>
         <Text style={{ color: Theme.accent, fontWeight: 'bold', fontSize: 16, fontFamily: 'monospace' }}>Campus<Text style={{ color: Theme.text3 }}>Eats</Text></Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <TouchableOpacity onPress={toggleTheme} style={{ padding: 4 }}>
+            <Text style={{ fontSize: 16 }}>{isLight ? '🌙' : '☀️'}</Text>
+          </TouchableOpacity>
           <Text style={{ color: Theme.text3, fontSize: 12, fontFamily: 'monospace' }}>{user?.name || 'Student'}</Text>
+          <TouchableOpacity onPress={onHistory} style={{ paddingHorizontal: 8, paddingVertical: 4, backgroundColor: Theme.bg3, borderRadius: 4, borderWidth: 1, borderColor: Theme.border }}>
+            <Text style={{ color: Theme.text2, fontSize: 10 }}>History</Text>
+          </TouchableOpacity>
           <TouchableOpacity onPress={onLogout} style={{ paddingHorizontal: 8, paddingVertical: 4, backgroundColor: Theme.bg3, borderRadius: 4, borderWidth: 1, borderColor: Theme.border }}>
-            <Text style={{ color: Theme.text2, fontSize: 10 }}>out</Text>
+            <Text style={{ color: Theme.text2, fontSize: 10 }}>Out</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -90,7 +99,7 @@ export default function MenuScreen({ inventory, cart, setCart, activeOrders, use
           <Text style={styles.trackerTitle}>🔥 Live Orders ({activeOrders.length})</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ paddingTop: 8 }}>
             {activeOrders.map(o => (
-              <View key={o.id} style={styles.trackerCard}>
+              <TouchableOpacity key={o.id} style={styles.trackerCard} onPress={() => setSelectedOrder(o)}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
                   <Text style={styles.trackerCode}>{o.code}</Text>
                   <Text style={styles.trackerCounter}>C{o.counter}</Text>
@@ -102,11 +111,44 @@ export default function MenuScreen({ inventory, cart, setCart, activeOrders, use
                   <View style={[styles.trackerBarHalf, { backgroundColor: Theme.accent }]} />
                   <View style={[styles.trackerBarHalf, { backgroundColor: o.status === 'ready' ? Theme.green : Theme.bg3 }]} />
                 </View>
-              </View>
+              </TouchableOpacity>
             ))}
           </ScrollView>
         </View>
       )}
+
+      {/* Modal Popup for ticking items */}
+      <Modal transparent visible={!!selectedOrder} animationType="fade" onRequestClose={() => setSelectedOrder(null)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ width: 300, backgroundColor: Theme.bg2, borderRadius: 16, padding: 24, borderWidth: 1, borderColor: Theme.border }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+              <View>
+                <Text style={{ color: Theme.accent, fontFamily: 'monospace', fontWeight: 'bold', fontSize: 16 }}>
+                  {selectedOrder?.code}
+                </Text>
+                <Text style={{ color: Theme.text3, fontSize: 11, fontFamily: 'monospace', marginTop: 4 }}>
+                  COUNTER {selectedOrder?.counter}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setSelectedOrder(null)}>
+                <Text style={{ color: Theme.text, fontSize: 24, fontWeight: 'bold' }}>×</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={{ gap: 12 }}>
+              {selectedOrder?.items.map((i, idx) => {
+                const tick = selectedOrder.status === 'ready' || selectedOrder.status === 'delivered';
+                return (
+                  <View key={idx} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: Theme.border, paddingBottom: 8 }}>
+                    <Text style={{ color: Theme.text, fontSize: 16 }}>{i.name} ×{i.qty}</Text>
+                    {tick && <Text style={{ fontSize: 18 }}>✅</Text>}
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {cartCount > 0 && (
         <View style={styles.cartBarContainer}>
@@ -120,7 +162,7 @@ export default function MenuScreen({ inventory, cart, setCart, activeOrders, use
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (Theme) => StyleSheet.create({
   header: { padding: 16 },
   topNav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 16, backgroundColor: Theme.bg2, borderBottomWidth: 1, borderBottomColor: Theme.border },
   headerTitle: { color: Theme.text, fontSize: 24, fontWeight: 'bold' },

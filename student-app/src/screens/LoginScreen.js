@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
-import { Theme } from '../Theme';
+import { useTheme } from '../Theme';
 
 export default function LoginScreen({ onLogin }) {
+  const { Theme } = useTheme();
+  const styles = getStyles(Theme);
   const [step, setStep] = useState('phone');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -75,7 +77,7 @@ export default function LoginScreen({ onLogin }) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (Theme) => StyleSheet.create({
   container: { flex: 1, backgroundColor: Theme.bg, justifyContent: 'center', padding: 24 },
   logo: { color: Theme.accent, fontSize: 32, fontWeight: 'bold', fontFamily: 'monospace', textAlign: 'center' },
   subtitle: { color: Theme.text3, fontSize: 13, fontFamily: 'monospace', textAlign: 'center', marginBottom: 32 },

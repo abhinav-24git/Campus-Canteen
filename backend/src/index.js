@@ -3,6 +3,7 @@ const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
 const { setIo, getState } = require('./db');
+const { getDb } = require('./firebase/config');
 const orderRoutes = require('./routes/orders');
 const paymentRoutes = require('./routes/payments');
 
@@ -29,31 +30,42 @@ io.on('connection', (socket) => {
   });
 
   // Handle admin updates
-  socket.on('update_inventory', (newInventory) => {
-    getState().inventory = newInventory;
-    io.emit('inventory_updated', newInventory);
+  socket.on('update_inventory', async (newInventory) => {
+    const db = getDb();
+    const batch = db.batch();
+    newInventory.forEach(item => {
+      const docRef = db.collection('inventory').doc(item.id.toString());
+      batch.set(docRef, item);
+    });
+    await batch.commit();
+    // onSnapshot in db.js handles emitting
   });
 
-  socket.on('add_item', (item) => {
-    const db = getState();
-    const newId = Math.max(0, ...db.inventory.map(i => i.id)) + 1;
+  socket.on('add_item', async (item) => {
+    const db = getDb();
+    const currentState = getState();
+    const newId = Math.max(0, ...currentState.inventory.map(i => i.id)) + 1;
     const newItem = { ...item, id: newId };
-    db.inventory.push(newItem);
-    io.emit('inventory_updated', db.inventory);
+    await db.collection('inventory').doc(newId.toString()).set(newItem);
   });
 
-  socket.on('delete_item', (id) => {
-    const db = getState();
-    db.inventory = db.inventory.filter(i => i.id !== id);
-    io.emit('inventory_updated', db.inventory);
+  socket.on('delete_item', async (id) => {
+    const db = getDb();
+    await db.collection('inventory').doc(id.toString()).delete();
   });
 
-  socket.on('update_order_status', ({ orderId, status, deliveredAt }) => {
+  socket.on('update_order_status', async ({ orderId, status, deliveredAt }) => {
+    const db = getDb();
+    const updateData = { status };
+    if (deliveredAt) updateData.deliveredAt = deliveredAt;
+    
+    await db.collection('orders').doc(orderId).update(updateData);
+    
+    // Fallback broadcast since we aren't sending specific order_updated in onSnapshot
+    // We fetch the updated state here just to emit the single update event locally to matching clients
     const order = getState().orders.find(o => o.id === orderId);
     if (order) {
-      order.status = status;
-      if (deliveredAt) order.deliveredAt = deliveredAt;
-      io.emit('order_updated', order);
+      io.emit('order_updated', { ...order, ...updateData });
     }
   });
 });

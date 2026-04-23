@@ -39,9 +39,20 @@ export default function AdminPanel({ socket, inventory, orders }) {
   };
 
   const renderAnalytics = () => {
-    const totalRev = orders.reduce((s, o) => s + o.total, 0);
-    const delivered = orders.filter(o => o.status === 'delivered').length;
+    const deliveredOrders = orders.filter(o => o.status === 'delivered');
+    const totalRev = deliveredOrders.reduce((s, o) => s + o.total, 0);
+    const deliveredCount = deliveredOrders.length;
     
+    // Rush Hour Graph bounds 6am to 7pm (19)
+    const hrRange = [];
+    for(let i=6; i<=19; i++) hrRange.push(i);
+    let maxOrders = 1;
+    const hourData = hrRange.map(h => {
+      const count = deliveredOrders.filter(o => new Date(o.timestamp).getHours() === h).length;
+      if(count > maxOrders) maxOrders = count;
+      return { h, count };
+    });
+
     return (
       <div>
         <div className="grid2" style={{ marginBottom: 16 }}>
@@ -51,13 +62,32 @@ export default function AdminPanel({ socket, inventory, orders }) {
           </div>
           <div className="stat-card">
             <div className="stat-label">Completed Orders</div>
-            <div className="stat-value">{delivered}</div>
+            <div className="stat-value">{deliveredCount}</div>
           </div>
         </div>
+        
+        <div className="section-label" style={{ marginBottom: 10 }}>Demand Surge Graph (6 AM - 7 PM)</div>
+        <div className="card" style={{ display: 'flex', gap: 6, height: 160, alignItems: 'flex-end', paddingTop: 20, marginBottom: 24 }}>
+          {hourData.map(({h, count}) => {
+            const pct = (count / maxOrders) * 100;
+            const isPeak = pct === 100 && count > 0;
+            return (
+              <div key={h} style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+                <div style={{ width: '100%', flex: 1, display: 'flex', alignItems: 'flex-end', background: 'var(--bg3)', borderRadius: 4 }}>
+                  <div style={{ width: '100%', height: `${pct}%`, background: isPeak ? 'var(--red)' : 'var(--accent)', borderRadius: 4, transition: 'height 0.8s ease-out' }} />
+                </div>
+                <div style={{ fontSize: 9, fontFamily: 'var(--mono)', color: isPeak ? 'var(--red)' : 'var(--text3)', fontWeight: isPeak ? 'bold' : 'normal' }}>
+                  {h > 12 ? h-12 : h}{h >= 12 ? 'p' : 'a'}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
         <div className="section-label" style={{ marginBottom: 10 }}>Revenue by Counter</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {[1, 2, 3].map(c => {
-            const cRev = orders.filter(o => o.counter === c).reduce((s, o) => s + o.total, 0);
+            const cRev = deliveredOrders.filter(o => o.counter === c).reduce((s, o) => s + o.total, 0);
             const pct = totalRev > 0 ? Math.round((cRev / totalRev) * 100) : 0;
             return (
               <div key={c} className="card-sm">
