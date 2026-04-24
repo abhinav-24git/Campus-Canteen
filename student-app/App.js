@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { SafeAreaView, StatusBar, StyleSheet, Platform, View } from 'react-native';
+import { SafeAreaView, StatusBar, StyleSheet, Platform, View, useWindowDimensions } from 'react-native';
 import { io } from 'socket.io-client';
 import LoginScreen from './src/screens/LoginScreen';
 import MenuScreen from './src/screens/MenuScreen';
@@ -25,111 +25,18 @@ if (Platform.OS === 'web') {
       overflow: hidden;
     }
 
-    /* Expo mounts into #root — center it without stretching it */
     #root {
       width: 100%;
       height: 100%;
       background: #0a0b0a;
       display: flex;
-      align-items: center;
-      justify-content: center;
     }
-
-    /* ── Phone shell cosmetics ── */
-    #phone-shell {
-      width: 390px;
-      height: 844px;
-      border-radius: 44px;
-      overflow: hidden;
-      border: 2px solid #2e322e;
-      box-shadow:
-        0 0 0 6px #181a18,
-        0 0 0 9px #2e322e,
-        0 32px 80px rgba(0,0,0,0.88),
-        0 0 60px rgba(200,241,53,0.06);
-      position: relative;
-      background: #0e0f0e;
-      flex-shrink: 0;
-    }
-
-    /* Dynamic island notch */
-    #phone-shell::before {
-      content: '';
-      position: absolute;
-      top: 12px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 120px;
-      height: 34px;
-      background: #000;
-      border-radius: 20px;
-      z-index: 9999;
-      pointer-events: none;
-    }
-
-    /* Side volume buttons */
-    #phone-shell::after {
-      content: '';
-      position: absolute;
-      right: -10px;
-      top: 140px;
-      width: 4px;
-      height: 70px;
-      background: #2e322e;
-      border-radius: 2px;
-      box-shadow: 0 90px 0 #2e322e;
-      pointer-events: none;
-    }
-
-    /* Hide all scrollbars inside the phone frame — scrolling still works */
-    #phone-shell *::-webkit-scrollbar { display: none; }
-    #phone-shell * { scrollbar-width: none; -ms-overflow-style: none; }
+    
+    /* Global scrollbar hiding for clean app feel */
+    *::-webkit-scrollbar { display: none; }
+    * { scrollbar-width: none; -ms-overflow-style: none; }
   `;
   document.head.appendChild(style);
-
-  // ── Auto-scale the phone shell to always fit the visible viewport ──────────
-  function scalePhoneShell() {
-    const shell = document.getElementById('phone-shell');
-    if (!shell) return;
-
-    const PHONE_W = 390;
-    const PHONE_H = 844;
-    const PAD = 24; // min padding around the phone (px, each side)
-
-    const availW = window.innerWidth  - PAD * 2;
-    const availH = window.innerHeight - PAD * 2;
-
-    const scaleByW = availW / PHONE_W;
-    const scaleByH = availH / PHONE_H;
-    const scale    = Math.min(1, scaleByW, scaleByH); // never upscale
-
-    // Apply scale — transform-origin: center so shell shrinks inward equally
-    shell.style.transform       = `scale(${scale})`;
-    shell.style.transformOrigin = 'center center';
-
-    // CSS transform doesn't change the element's layout footprint.
-    // Collapse the dead space so #root can center it properly.
-    const dead = Math.round(PHONE_H * (1 - scale));
-    shell.style.marginTop    = `-${dead / 2}px`;
-    shell.style.marginBottom = `-${dead / 2}px`;
-
-    const deadW = Math.round(PHONE_W * (1 - scale));
-    shell.style.marginLeft  = `-${deadW / 2}px`;
-    shell.style.marginRight = `-${deadW / 2}px`;
-  }
-
-  // Run once DOM is ready, then on every resize
-  window.addEventListener('resize', scalePhoneShell);
-  // Use rAF loop until the shell is mounted then stop
-  function waitAndScale() {
-    if (document.getElementById('phone-shell')) {
-      scalePhoneShell();
-    } else {
-      requestAnimationFrame(waitAndScale);
-    }
-  }
-  requestAnimationFrame(waitAndScale);
-  // ────────────────────────────────────────────────────────────────────────────
 }
 // ──────────────────────────────────────────────────────────────────────────────
 
@@ -143,6 +50,17 @@ function PhoneFrame({ children, bg, phoneViewStyle }) {
   if (Platform.OS !== 'web') {
     return children;
   }
+
+  // Detect real mobile browsers specifically (Android, iOS) so we strip the desktop skin
+  const isMobileClient = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  if (isMobileClient) {
+    return (
+      <View style={{ flex: 1, backgroundColor: bg }}>
+        {children}
+      </View>
+    );
+  }
+
   return (
     <div id="phone-shell" style={{ background: bg }}>
       {/* This View is the TRUE layout root — flex:1 children measure against it */}
@@ -155,6 +73,7 @@ function PhoneFrame({ children, bg, phoneViewStyle }) {
 
 function MainApp() {
   const { Theme, isLight } = useTheme();
+  
   const styles = getStyles(Theme);
   const [user, setUser] = useState(null);
   const [route, setRoute] = useState('Menu'); // Menu | Checkout
@@ -236,9 +155,9 @@ function MainApp() {
   );
 
   return (
-    <PhoneFrame bg={Theme.bg} phoneViewStyle={styles.phoneView}>
+    <View style={{ flex: 1, backgroundColor: Theme.bg }}>
       {appContent}
-    </PhoneFrame>
+    </View>
   );
 }
 
@@ -251,14 +170,7 @@ export default function App() {
 }
 
 const getStyles = (Theme) => StyleSheet.create({
-  // 390×844 = iPhone 14 logical dimensions — this is the layout root on web
-  phoneView: {
-    width: 390,
-    height: 844,
-    backgroundColor: Theme.bg,
-    //overflow: 'hidden',
-  },
-  // Used as the app root inside the phone view
+  // Used as the app root
   fill: {
     flex: 1,
     backgroundColor: Theme.bg,
