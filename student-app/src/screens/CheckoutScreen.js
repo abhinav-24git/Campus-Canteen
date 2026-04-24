@@ -28,7 +28,8 @@ export default function CheckoutScreen({ cart, inventory, user, onBack, onComple
   const handlePayment = async () => {
     setStatus('processing');
     try {
-      const backendUrl = Platform.OS === 'web' ? 'http://localhost:8080' : 'http://10.0.2.2:8080';
+      const localBackend = Platform.OS === 'web' ? 'http://localhost:8080' : 'http://10.0.2.2:8080';
+      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL || localBackend;
       
       // 1. Fetch valid RZP Order ID from backend
       const rzpRes = await fetch(`${backendUrl}/payments/create-rzp`, {
